@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+
+  secrets       UserSecret?
+  subscriptions AoiSubscription[]
+  events        AoiEvent[]
+}
+
+model UserSecret {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skyfiKey   String
+  aiProvider String   @default("claude")
+  aiKey      String
+  updatedAt  DateTime @updatedAt
+}
+
+model AoiSubscription {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId String   @unique
+  label          String?
+  aoiWkt         String   @db.Text
+  createdAt      DateTime @default(now())
+
+  events AoiEvent[] @relation("SubscriptionEvents")
+
+  @@index([userId])
+}
+
+model AoiEvent {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   AoiSubscription? @relation("SubscriptionEvents", fields: [subscriptionId], references: [subscriptionId])
+  payload        Json
+  purchaseInvitation Json?
+  emailSent      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
+  @@index([userId])
+  @@index([subscriptionId])
+}

@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SkyFi Agent
 
-## Getting Started
+An AI-powered web interface for the [SkyFi Remote MCP Server](../project1). Search satellite imagery, check feasibility, order imagery, and monitor areas of interest — all through natural language.
 
-First, run the development server:
+## Features
+
+- **AI chat** — talk to satellite imagery data using Claude, ChatGPT, or Gemini
+- **Interactive map** — draw polygon AOIs on a dark Leaflet map, then search or monitor them
+- **Safe ordering** — every order requires explicit confirmation; costs are shown before purchase
+- **AOI monitoring** — watch any area for new satellite collects; receive in-app + email alerts
+- **Bring your own keys** — connect your own SkyFi and AI provider API keys, stored encrypted
+
+## Stack
+
+- Next.js 16 (App Router)
+- NextAuth.js v4 (email/password, JWT)
+- Prisma 7 + PostgreSQL (Railway)
+- Vercel AI SDK v6 + `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`
+- `@modelcontextprotocol/sdk` (StreamableHTTP client)
+- Leaflet + leaflet-draw + CartoDB dark tiles
+- Resend (email notifications)
+
+## Prerequisites
+
+1. **Deploy [project1](../project1)** to Railway — this app calls it as its backend
+2. **PostgreSQL** — Railway provides one automatically
+3. **Resend account** (optional) — for email notifications
+4. **AI provider API key** — Anthropic, OpenAI, or Google
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env
+# Fill in .env values (see below)
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL=          # Railway Postgres URL
+NEXTAUTH_SECRET=       # openssl rand -base64 32
+NEXTAUTH_URL=          # https://yourapp.railway.app
+ENCRYPTION_KEY=        # node -e "require('crypto').randomBytes(32).toString('hex')"
+MCP_SERVER_URL=        # https://your-mcp-server.railway.app
+RESEND_API_KEY=        # optional — for email alerts
+RESEND_FROM_EMAIL=     # optional — sender address
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Railway
 
-## Learn More
+1. Create a new Railway project
+2. Add a PostgreSQL service
+3. Deploy this repo — Railway auto-detects Next.js via Nixpacks
+4. Set environment variables in Railway dashboard
+5. Railway runs `npx prisma migrate deploy && node server.js` on start (via `railway.toml`)
 
-To learn more about Next.js, take a look at the following resources:
+## How it works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+Browser → /api/chat (Next.js API route)
+            ↓ creates StreamableHTTPClientTransport
+            ↓ injects X-Skyfi-Api-Key + X-Skyfi-Notification-Url
+            ↓ connects to MCP server (project1)
+            ↓ lists tools, calls them via AI provider
+            ↓ streams text response back to browser
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+SkyFi → MCP server webhook → /api/webhooks/aoi?userId=XXX
+          ↓ stores event in Postgres
+          ↓ sends Resend email
+          ↓ /notifications page polls every 30s
+```
 
-## Deploy on Vercel
+## Relationship to project1
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app **never modifies project1**. It calls the deployed MCP server as an HTTP dependency. Project1 remains unchanged and open-source; this app is a consumer of it.
