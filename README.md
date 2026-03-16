@@ -51,11 +51,10 @@ RESEND_FROM_EMAIL=     # optional — sender address
 
 ## Deploy to Railway
 
-1. Create a new Railway project
-2. Add a PostgreSQL service
-3. Deploy this repo — Railway auto-detects Next.js via Nixpacks
-4. Set environment variables in Railway dashboard
-5. Railway runs `npx prisma migrate deploy && node server.js` on start (via `railway.toml`)
+1. Create a new Railway project and add a **PostgreSQL** service.
+2. Deploy this repo (connect GitHub). Railway uses Nixpacks with Node 20 (`nixpacks.toml` + `.nvmrc`).
+3. **SkyFi-app** service → **Variables** → add **DATABASE_URL** as a **reference**: choose the Postgres service and `DATABASE_URL`. (Required; without it the app will crash at startup.)
+4. Set the rest of the env vars (see list above). Railway runs `npx prisma migrate deploy && npm run start` on start.
 
 ## How it works
 
