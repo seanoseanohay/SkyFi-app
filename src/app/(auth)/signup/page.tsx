@@ -26,10 +26,10 @@ export default function SignupPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, name }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setLoading(false);
-      toast.error(data.error ?? "Registration failed");
+      toast.error((data as { error?: string }).error ?? "Registration failed");
       return;
     }
     await signIn("credentials", { email, password, redirect: false });
